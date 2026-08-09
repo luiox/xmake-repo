@@ -1,4 +1,5 @@
 -- imports
+import("test_addons")
 import("test_templates")
 import("test_packages")
 
@@ -6,6 +7,13 @@ function main(...)
     local argv = table.pack(...)
     local run_packages = false
     local run_templates = false
+    local run_addons = false
+
+    -- only test the addons? e.g. xmake l scripts/test.lua --addon esp32-devel
+    if table.contains(argv, "--addon") then
+        test_addons(table.unpack(argv))
+        return
+    end
 
     -- get modified files
     local diff = try {function () return os.iorun("git --no-pager diff --name-only HEAD^") end}
@@ -16,6 +24,8 @@ function main(...)
                 run_packages = true
             elseif file:startswith("templates") then
                 run_templates = true
+            elseif file:startswith("addons") then
+                run_addons = true
             end
         end
     else
@@ -23,9 +33,15 @@ function main(...)
         run_packages = true
     end
 
-    -- if no changes detected in packages or templates, run package tests by default (e.g. tbox dev)
-    if not run_packages and not run_templates then
+    -- if no changes detected in packages, templates or addons, run package tests by default (e.g. tbox dev)
+    if not run_packages and not run_templates and not run_addons then
         run_packages = true
+    end
+
+    -- run addon tests
+    if run_addons then
+        print("Running addon tests...")
+        test_addons(table.unpack(argv))
     end
 
     -- run template tests
